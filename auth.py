@@ -29,6 +29,7 @@ TIMEOUT = 3
 BASEDN = "dc=ldap,dc=goauthentik,dc=io"
 
 # Attributes to retrieve during LDAP search
+# examples "cn", "uid"
 ATTRS = "cn"
 
 # Base filter for LDAP search (you can add a group filter here as well)
@@ -47,7 +48,7 @@ if "username" not in os.environ or "password" not in os.environ:
 safe_username = escape_filter_chars(os.environ["username"])
 
 # LDAP filter for user search
-FILTER = "(&{}(cn={}))".format(BASE_FILTER, safe_username)
+FILTER = "(&{}({}={}))".format(BASE_FILTER, ATTRS, safe_username)
 
 # Initialize LDAP server connection
 server = Server(SERVER, get_info=ALL)
