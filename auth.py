@@ -45,6 +45,9 @@ BASEDN = "DC=ldap,DC=goauthentik,DC=io"
 ATTRS = "cn"
 
 # Base filter for LDAP search (you can add a group filter here as well)
+#
+# this is the part to find the groups for my guest and me, needs to be changed here and at the bottom
+#(|(memberof=cn=admin,ou=groups,dc=ldap,dc=goauthentik,dc=io)(memberof=cn=guest,ou=groups,dc=ldap,dc=goauthentik,dc=io))
 BASE_FILTER = """
     (&
         (objectClass=person)
@@ -52,6 +55,7 @@ BASE_FILTER = """
             (sAMAccountName={})
             (cn={})
         )
+        
         (|(memberof=cn=admin,ou=groups,dc=ldap,dc=goauthentik,dc=io)(memberof=cn=guest,ou=groups,dc=ldap,dc=goauthentik,dc=io))
     )"""
 #########################
@@ -116,11 +120,11 @@ try:
 except Exception as e:
     eprint("bind as {} failed: {}".format(os.environ["username"], e))
     exit(1)
-
-if "cn=homeassistant_admins,ou=groups,dc=ldap,dc=goauthentik,dc=io" in user_memberof:
+#groups
+if "cn=admin,ou=groups,dc=ldap,dc=goauthentik,dc=io" in user_memberof:
     print("name = {}".format(user_displayName), "group = system-admin", "local_only = false" ,sep=os.linesep)
-
-if "cn=homeassistant_users,ou=groups,dc=ldap,dc=goauthentik,dc=io" in user_memberof:
+#groups
+if "cn=guest,ou=groups,dc=ldap,dc=goauthentik,dc=io" in user_memberof:
     print("name = {}".format(user_displayName), "group = system-users", "local_only = true " ,  sep=os.linesep)
 
 # Print success message to standard error
