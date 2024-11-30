@@ -1,4 +1,7 @@
 # Home Assistant LDAP Auth Script
+Thank you panteLx
+https://github.com/panteLx/HASS-LDAP-Auth
+for sharing your code with the world
 
 This Python script performs a Home Assistant user authentication against an LDAP server. The script uses the `ldap3` library to connect to the LDAP server, search for a user, and authenticate the user based on the provided username and password.
 
@@ -13,19 +16,9 @@ This Python script performs a Home Assistant user authentication against an LDAP
    chmod +x auth.py
    ```
 
-3. Open the Docker container of your HASS instance (e.g. via SSH plugin)
 
-   ```bash
-   docker exec -it homeassistant bash
-   ```
 
-4. Install the required pip module (e.g. via SSH plugin)
-
-   ```bash
-   pip install -t . ldap3
-   ```
-
-5. Add the following to your `configuration.yaml` file
+2. Add the following to your `configuration.yaml` file
 
    ```bash
    homeassistant:
@@ -38,9 +31,9 @@ This Python script performs a Home Assistant user authentication against an LDAP
            - type: homeassistant
    ```
 
-6. Restart your HASS instance (**not just the configuration**)
+3. Restart your HASS instance (**not just the configuration**)
 
-7. You may now log in via LDAP auth
+4. You may now log in via LDAP auth
 
 ## LDAP Configuration
 
