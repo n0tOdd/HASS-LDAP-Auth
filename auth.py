@@ -124,9 +124,11 @@ except Exception as e:
 if "cn=admin,ou=groups,dc=ldap,dc=goauthentik,dc=io" in user_memberof:
     print("name = {}".format(user_displayName), "group = system-admin", "local_only = false" ,sep=os.linesep)
 #groups
-if "cn=guest,ou=groups,dc=ldap,dc=goauthentik,dc=io" in user_memberof:
+else if "cn=guest,ou=groups,dc=ldap,dc=goauthentik,dc=io" in user_memberof:
     print("name = {}".format(user_displayName), "group = system-users", "local_only = true " ,  sep=os.linesep)
-
+else:
+    eprint("No access for this user")
+    exit(1)
 # Print success message to standard error
 eprint("{} authenticated successfully".format(os.environ["username"]))
 
