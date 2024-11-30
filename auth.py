@@ -1,40 +1,59 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
+# ldap-auth-ad.py - authenticate Home Assistant against AD via LDAP
+# Based on Rechner Fox's ldap-auth.py
+# Original found at https://gist.github.com/rechner/57c123d243b8adb83ccb1dc94c80847f
 
 import os
 import sys
-from ldap3 import Server, Connection, ALL
-from ldap3.utils.conv import escape_bytes, escape_filter_chars
+import pip
 
+#function to install missing pip packages
+def install(package):
+  if hasattr(pip, 'main'):
+    pip.main(['install', package])
+  else:
+    pip._internal.main(['install', package])
 
-# Function to print to standard error
+try:
+  from ldap3 import Server, Connection, ALL
+  from ldap3.utils.conv import escape_bytes, escape_filter_chars
+except:
+  install('ldap3')
+  from ldap3 import Server, Connection, ALL
+  from ldap3.utils.conv import escape_bytes, escape_filter_chars
+
+# Quick and dirty print to stderr
 def eprint(*args, **kwargs):
     print(*args, file=sys.stderr, **kwargs)
 
+# XXX: Update these with settings apropriate to your environment:
+# (mine below are based on Active Directory and a security group)
+SERVER = "ldap://192.168.86.3:389"
 
-###########################
-### CONFIGURATION START ###
-###########################
+# We need to search by SAM/UPN to find the DN, so we use a helper account
+# This account should be unprivileged and blocked from interactive logon
+HELPERDN = "cn=ldapservice,ou=users,DC=ldap,DC=goauthentik,DC=io"
+#Orginal string 
+#"CN=LDAP Helper,OU=Service Accounts,OU=Accounts,DC=ad,DC=example,DC=com"
+HELPERPASS = "N0tMyPassword"
 
-# LDAP server configuration
-SERVER = "ldap://YOUR_SERVER_IP:389"
-
-# Helper LDAP user DN and password
-HELPERDN = "cn=LDAPSEARCH_USERNAME,ou=users,dc=ldap,dc=goauthentik,dc=io"
-HELPERPASS = "LDAPSEARCH_PASSWORD"
-
-# Timeout for LDAP operations
 TIMEOUT = 3
-
-# Base DN for LDAP search
-BASEDN = "dc=ldap,dc=goauthentik,dc=io"
+BASEDN = "DC=ldap,DC=goauthentik,DC=io"
 
 # Attributes to retrieve during LDAP search
 # examples "cn", "uid"
 ATTRS = "cn"
 
 # Base filter for LDAP search (you can add a group filter here as well)
-BASE_FILTER = "(objectClass=person)"
-
+BASE_FILTER = """
+    (&
+        (objectClass=person)
+        (|
+            (sAMAccountName={})
+            (cn={})
+        )
+        (|(memberof=cn=admin,ou=groups,dc=ldap,dc=goauthentik,dc=io)(memberof=cn=guest,ou=groups,dc=ldap,dc=goauthentik,dc=io))
+    )"""
 #########################
 ### CONFIGURATION END ###
 #########################
@@ -48,7 +67,9 @@ if "username" not in os.environ or "password" not in os.environ:
 safe_username = escape_filter_chars(os.environ["username"])
 
 # LDAP filter for user search
-FILTER = "(&{}({}={}))".format(BASE_FILTER, ATTRS, safe_username)
+FILTER =  BASE_FILTER.format(safe_username, safe_username)
+
+#¤"(&{}({}={}))".format(BASE_FILTER, ATTRS, safe_username)
 
 # Initialize LDAP server connection
 server = Server(SERVER, get_info=ALL)
@@ -62,7 +83,7 @@ except Exception as e:
     exit(1)
 
 # Perform LDAP search for the user
-search = conn.search(BASEDN, FILTER, attributes="displayName")
+search = conn.search(BASEDN, FILTER,attributes=['displayName','memberof'])
 
 # Check if the search returned any results
 if len(conn.entries) > 0:
@@ -74,6 +95,7 @@ if len(conn.entries) > 0:
     # Extract user DN and displayName from search results
     user_dn = conn.entries[0].entry_dn
     user_displayName = conn.entries[0].displayName
+    user_memberof = conn.entries[0].memberOf[0]
 else:
     eprint("search for username {} yielded empty result".format(os.environ["username"]))
     exit(1)
@@ -95,9 +117,11 @@ except Exception as e:
     eprint("bind as {} failed: {}".format(os.environ["username"], e))
     exit(1)
 
-# Print user information and success message
-print("name = {}".format(user_displayName))
-print("group = system-users")
+if "cn=homeassistant_admins,ou=groups,dc=ldap,dc=goauthentik,dc=io" in user_memberof:
+    print("name = {}".format(user_displayName), "group = system-admin", "local_only = false" ,sep=os.linesep)
+
+if "cn=homeassistant_users,ou=groups,dc=ldap,dc=goauthentik,dc=io" in user_memberof:
+    print("name = {}".format(user_displayName), "group = system-users", "local_only = true " ,  sep=os.linesep)
 
 # Print success message to standard error
 eprint("{} authenticated successfully".format(os.environ["username"]))
